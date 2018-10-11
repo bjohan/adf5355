@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name adf5355)(type Legacy)(uri /home/bjohan/projects/adf5355/adf5355/adf5355.lib)(options "")(descr ""))
+  (lib (name AD7150)(type Legacy)(uri /home/bjohan/projects/adf5355/adf5355/AD7150.lib)(options "")(descr ""))
+)
