@@ -3728,7 +3728,7 @@
   )
 
   (module Capacitors_SMD:C_0603 (layer F.Cu) (tedit 59958EE7) (tstamp 5BC34274)
-    (at 119.126 97.79)
+    (at 117.475 99.06)
     (descr "Capacitor SMD 0603, reflow soldering, AVX (see smccp.pdf)")
     (tags "capacitor 0603")
     (path /5BF4C892)
