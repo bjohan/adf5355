@@ -1292,8 +1292,6 @@ Wire Wire Line
 Wire Wire Line
 	1800 6650 2100 6650
 Wire Wire Line
-	1800 6750 2100 6750
-Wire Wire Line
 	1800 6950 2100 6950
 Wire Wire Line
 	1800 7050 2100 7050
@@ -1320,9 +1318,9 @@ Text Label 1950 6550 0    50   ~ 0
 CLK
 Text Label 1950 6650 0    50   ~ 0
 DATA
-Text Label 1950 6750 0    50   ~ 0
-LE
 Text Label 1950 6850 0    50   ~ 0
+LE
+Text Label 1950 6750 0    50   ~ 0
 MUX
 Wire Wire Line
 	3800 2500 3800 5350
@@ -1926,7 +1924,7 @@ U 1 1 5BFE6240
 P 7500 4850
 F 0 "R13" H 7430 4804 50  0000 R CNN
 F 1 "220" H 7430 4895 50  0000 R CNN
-F 2 "Resistors_SMD:R_0805" V 7430 4850 50  0001 C CNN
+F 2 "Resistors_SMD:R_0603" V 7430 4850 50  0001 C CNN
 F 3 "~" H 7500 4850 50  0001 C CNN
 	1    7500 4850
 	-1   0    0    1   
@@ -2114,8 +2112,6 @@ F 3 "" H 2500 7600 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	2500 7550 2500 7600
-Wire Wire Line
-	1800 6850 2500 6850
 Wire Wire Line
 	6950 3600 8300 3600
 Wire Wire Line
@@ -2440,4 +2436,10 @@ Wire Wire Line
 Connection ~ 2600 3450
 Wire Wire Line
 	2600 3450 2850 3450
+Wire Wire Line
+	2500 6850 2500 6750
+Wire Wire Line
+	1800 6750 2500 6750
+Wire Wire Line
+	1800 6850 2100 6850
 $EndSCHEMATC
