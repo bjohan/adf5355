@@ -110,10 +110,62 @@ void sendRegister6(	uint32_t gated_bleed,
 	word |= (charge_pump_bleed_current &0xFF) << (12+1);
 	word |= (rf_divider_select&0x07) << (13+8);
 	word |= (feedback_select &0x01) << (21+3);
-	word |= (0x1010 &0xF) << (24+1); //reserved 0xA
+	word |= (uint32_t)(0x1010 &0xF) << (24+1); //reserved 0xA
 	word |= (negative_bleed &0x01) << (25+4);
 	word |= (gated_bleed &0x01) << (29+1);
 	sendWord(word);	
+}
+
+void sendRegister7(	uint32_t le_synchronization, 
+			uint32_t ld_cycle_count,
+			uint32_t lol_mode,
+			uint32_t frac_n_ld_precision, 
+			uint32_t ld_mode){
+	uint32_t word = 7;
+	word |= (ld_mode&0x1) << (4);
+	word |= (frac_n_ld_precision&0x3) << (5);
+	word |= (lol_mode&0x1) << (7);
+	word |= (ld_cycle_count&0x3) << (8);
+	word |= (le_synchronization&0x1) << (25);
+	word |= (uint32_t)(0x04 &0x3F) << (26);
+	sendWord(word);	
+}
+
+void sendRegister8(){
+	sendWord(0x102D0428);
+}
+
+void sendRegister9(	uint32_t vco_band_division,
+			uint32_t timeout,
+			uint32_t automatic_level_timeout,
+			uint32_t synthesizer_lock_timeout)
+{
+	uint32_t word = 9;
+	word |= (synthesizer_lock_timeout&0x1F)<<(4);
+	word |= (automatic_level_timeout&0x1F)<<(9);
+	word |= (timeout&0x3FF)<<(14);
+	word |= (vco_band_division&0xFF)<<(24);
+	sendWord(word);	
+}
+
+void sendRegister10(uint32_t adc_clock_divider, uint32_t adc_conversion, uint32_t adc_enable){
+	uint32_t word = 10;
+	word |= (adc_enable &0x01) << 4;
+	word |= (adc_conversion &0x01) << 5;
+	word |= (adc_clock_divider &0xFF) << 6;
+	word |= uint32_t( 0x00300&0x3FFFF) << 14;
+	sendWord(word);	
+}
+
+void sendRegister11(){
+	sendWord(0x0061300B);
+}
+
+void sendRegister12(uint32_t phase_resync_clock_divider){
+	uint32_t word = 12;
+	word |= (uint32_t)(0x41&0xFFF)<<4;
+	word |= (phase_resync_clock_divider & 0xFFFF) << 16;
+	sendWord(word);
 }
 
 
