@@ -18,28 +18,16 @@ void setup() {
 
 void sendWord(uint32_t word)
 {
-	//PORTB &= ~_BV(PB3); //Clear LE
 	digitalWrite(LE, LOW);
-	//delay(10);
 	for(uint32_t b = 32 ; b > 0 ; b--){
-		//PORTB &= ~_BV(PB5); //Clear CLK
 		digitalWrite(CLK, LOW);
-		//delay(10);
 		if(word & 0x80000000)
 			digitalWrite(DATA, HIGH);
-			//PORTB |= _BV(PB4); //Set data if a one should be sent
 		else
 			digitalWrite(DATA, LOW);
-			//PORTB &= ~_BV(PB4); //Clear data if a zero should be sent
-		//delay(10);
-		//PORTB |= _BV(PB5); //Set CLK
 		digitalWrite(CLK, HIGH);
-		//delay(10);
 		word <<= 1;
 	}
-
-		//delay(10);
-	//PORTB |= _BV(PB3); //Set LE
 	digitalWrite(LE, HIGH);
 }
 
@@ -97,6 +85,35 @@ void sendRegister4(	uint32_t mux_out,
 	word |= (reference_doubler&0x1) << (4+6+4+1+10+1);
 	word |= (mux_out&0x7) << (4+6+4+1+10+1+1);
 	sendWord(word);
+}
+
+void sendRegister5(){
+	sendWord(0x00800025);
+}
+
+void sendRegister6(	uint32_t gated_bleed,
+			uint32_t negative_bleed,
+			uint32_t feedback_select,
+			uint32_t rf_divider_select,
+			uint32_t charge_pump_bleed_current,
+			uint32_t mtld, 
+			uint32_t rf_out_b,
+			uint32_t rf_out_a,
+			uint32_t rf_out_power){
+	uint32_t word = 6;
+	word |= (rf_out_power &0x03) << (4);
+	word |= (rf_out_a& 0x01) << (4+2);
+	word |= (0 &0x07) << (6+1); //Three reserved zeros
+	word |= (rf_out_b &0x01) << (7+3);
+	word |= (mtld &0x01) << (10+1);
+	word |= (0 &0x01) << (11+1); //reserved zero
+	word |= (charge_pump_bleed_current &0xFF) << (12+1);
+	word |= (rf_divider_select&0x07) << (13+8);
+	word |= (feedback_select &0x01) << (21+3);
+	word |= (0x1010 &0xF) << (24+1); //reserved 0xA
+	word |= (negative_bleed &0x01) << (25+4);
+	word |= (gated_bleed &0x01) << (29+1);
+	sendWord(word);	
 }
 
 
