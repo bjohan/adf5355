@@ -3,18 +3,10 @@
 #define DATA 11
 #define CE 12
 #define CLK 13
+#define PFD_MAX 125000000
+#define VCO_MIN 3400000000
+#define VCO_MAX 6800000000
 
-
-
-// the setup routine runs once when you press reset:
-void setup() {                
-  // initialize the digital pin as an output.
-  pinMode(MUX, INPUT);     
-  pinMode(CE, INPUT); //has pullup on pll-board so make input for hiZ
-  pinMode(DATA, OUTPUT);     
-  pinMode(CLK, OUTPUT);     
-  pinMode(LE, OUTPUT);     
-}
 
 void sendWord(uint32_t word)
 {
@@ -31,7 +23,7 @@ void sendWord(uint32_t word)
 	digitalWrite(LE, HIGH);
 }
 
-void sendRegister(uint32_t autocal, uint32_t prescaler, uint32_t intv){
+void sendRegister0(uint32_t autocal, uint32_t prescaler, uint32_t intv){
 	uint32_t word= 0;
 	word |= (intv&0xFFFF)<<(4);
 	word |= (prescaler&0x1)<<(4+16);
@@ -168,10 +160,126 @@ void sendRegister12(uint32_t phase_resync_clock_divider){
 	sendWord(word);
 }
 
+uint64_t computePfd(uint64_t fref, uint32_t *ref_double, uint32_t *ref_counter, uint32_t *ref_div){
+	//Computute a high PFD
+	Serial.println("Computing PFD");
+	*ref_double = 0;
+	*ref_div = 0;
+	if(fref < PFD_MAX){
+		*ref_double = 1;
+		fref=fref*2;
+	}
+	if(fref > PFD_MAX){
+		*ref_counter = int((fref+PFD_MAX/2)/PFD_MAX);
+		fref = fref/(*ref_counter);
+	} else {
+		*ref_counter = 1;
+	}
+	Serial.print("Ref freq: "); Serial.print((uint32_t)fref);
+	Serial.print(" Ref doubler: "); Serial.print(*ref_double);
+	Serial.print(" Ref halver: "); Serial.print(*ref_div);
+	Serial.print(" Ref counter: "); Serial.println(*ref_counter);
+	Serial.print("PFD frequency: "); Serial.println((uint32_t) fref);
+	return fref;
+}
+
+uint64_t findVcoFrequency(uint64_t freq, uint32_t *rf_div){
+	*rf_div = 0;
+	Serial.println("Finding VCO frequency");
+	if(freq > VCO_MAX){ 
+		Serial.println("ERROR: Frequency above VCO range");
+		Serial.println(freq/1000000.0);
+		return 0;
+	}
+	for(int i = 0 ; i < 7; i++){
+		Serial.println(freq/1000000.0);
+		if(freq >= VCO_MIN && freq <= VCO_MAX){
+			Serial.print("Found frequency: ");
+			Serial.print(freq/1000000.0);
+			Serial.print(" With divide by: ");
+			Serial.println(1<<(*rf_div));
+			return freq;
+		}
+		if(freq < VCO_MIN){
+			freq = freq*2;
+			*rf_div=*rf_div+1;
+		}
+	}
+	Serial.println("ERROR: Frequency below VCO range");
+	return 0;
+}
+
+uint32_t computeAdcClkDiv(uint64_t fpfd){
+	uint32_t div;
+	uint64_t q = (fpfd/100000)-2;
+	div = (q+4)/4;
+	div = div > 255 ? 255 : div;
+	Serial.print("ADC_CLK_DIV: ") ; Serial.println(div);
+	Serial.print("ADC rate: ") ; Serial.println(((uint32_t)fpfd)/div/4);
+	return div;
+}
+
+uint32_t computeVcoBandDivision(uint64_t fpfd){
+	uint32_t vcoBand = (fpfd+2399999)/2400000;
+	Serial.print("VCO band division: "); Serial.println(vcoBand);
+	return vcoBand;
+} 
+
+uint32_t computeInt(uint64_t fpfd, uint64_t fvco){
+	uint32_t n = fvco/fpfd;
+	float fVco = n*fpfd;
+	Serial.print("INT is: "); Serial.println(n);
+	Serial.print("VCO Frequency is: "); Serial.println(fVco/1000000.0);
+	return n;
+}
+
+void setFrequency(uint64_t frequency, uint64_t ref){
+	uint32_t ref_doubler = 0;
+	uint32_t ref_div = 0;
+	uint32_t ref_counter = 0;
+	uint64_t fpfd = 0;
+	uint64_t fvco = 0;
+	uint32_t rfdiv = 0;
+	uint32_t adcDiv = 0;
+	uint32_t vcoBandDiv = 0;
+	uint32_t intn;
+	fpfd = computePfd(ref, &ref_doubler, &ref_counter, &ref_div);
+	fvco = findVcoFrequency(frequency, &rfdiv);
+	adcDiv = computeAdcClkDiv(fpfd);
+	vcoBandDiv = computeVcoBandDivision(fpfd);
+	intn = computeInt(fpfd, fvco);
+	//write registers
+	sendRegister12(1); //Normal operation fpr phase resync
+	sendRegister11();
+	sendRegister10(adcDiv, 1, 1);
+	sendRegister9(vcoBandDiv, 1023, 31, 31); //Timeouts set to max, fix!
+	sendRegister8();
+	sendRegister7(1, 3, 0, 3, 1); //Look at these values
+	sendRegister6(1, 2, 3, rfdiv, 0, 0, 0, 1, 3); //Look in datasheet to compute bleed current
+	sendRegister5();
+	sendRegister4(6, ref_doubler, ref_div, ref_counter, 0, 2, 0, 1, 1, 0, 0, 0);
+	sendRegister3(0, 0, 0, 0); //No phase resync
+	sendRegister2(0,2); //No frac yet
+	sendRegister1(0); //Also no frac
+	sendRegister0(1, 0, intn);
+	
+}
+
+// the setup routine runs once when you press reset:
+void setup() {                
+	// initialize the digital pin as an output.
+	pinMode(MUX, INPUT);     
+	pinMode(CE, INPUT); //has pullup on pll-board so make input for hiZ
+	pinMode(DATA, OUTPUT);     
+	pinMode(CLK, OUTPUT);     
+	pinMode(LE, OUTPUT);
+	Serial.begin(115200);
+	setFrequency(145100000, 20000000);
+}
 
 void loop() {
-	delay(1000);
-	sendRegister4(1,0,0,0,0,0,0,1,0,0,0,0);
-	delay(1000);               // wait for a second
-	sendRegister4(0,0,0,0,0,0,0,1,0,0,0,0);
+	//delay(1000);
+	//sendRegister4(1,0,0,0,0,0,0,1,0,0,0,0);
+	//delay(1000);               // wait for a second
+	//sendRegister4(0,0,0,0,0,0,0,1,0,0,0,0);
 }
