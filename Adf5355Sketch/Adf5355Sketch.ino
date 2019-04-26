@@ -243,6 +243,8 @@ void setFrequency(uint64_t frequency, uint64_t ref){
 	uint32_t adcDiv = 0;
 	uint32_t vcoBandDiv = 0;
 	uint32_t intn;
+	uint32_t icp = 2;
+	uint32_t bleedi = 0;
 	fpfd = computePfd(ref, &ref_doubler, &ref_counter, &ref_div);
 	fvco = findVcoFrequency(frequency, &rfdiv);
 	adcDiv = computeAdcClkDiv(fpfd);
@@ -255,12 +257,13 @@ void setFrequency(uint64_t frequency, uint64_t ref){
 	sendRegister9(vcoBandDiv, 1023, 31, 31); //Timeouts set to max, fix!
 	sendRegister8();
 	sendRegister7(1, 3, 0, 3, 1); //Look at these values
-	sendRegister6(1, 2, 3, rfdiv, 0, 0, 0, 1, 3); //Look in datasheet to compute bleed current
+	sendRegister6(0, 0, 1, rfdiv, bleedi, 0, 0, 1, 3); //Look in datasheet to compute bleed current
 	sendRegister5();
-	sendRegister4(6, ref_doubler, ref_div, ref_counter, 0, 2, 0, 1, 1, 0, 0, 0);
+	sendRegister4(6, ref_doubler, ref_div, ref_counter, 0, icp, 0, 0, 1, 0, 0, 0);
 	sendRegister3(0, 0, 0, 0); //No phase resync
 	sendRegister2(0,2); //No frac yet
 	sendRegister1(0); //Also no frac
+	delay(1);
 	sendRegister0(1, 0, intn);
 	
 }
@@ -274,7 +277,7 @@ void setup() {
 	pinMode(CLK, OUTPUT);     
 	pinMode(LE, OUTPUT);
 	Serial.begin(115200);
-	setFrequency(145100000, 20000000);
+	setFrequency(VCO_MIN, 10000000);
 }
 
 void loop() {
