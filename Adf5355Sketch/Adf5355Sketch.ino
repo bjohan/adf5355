@@ -6,7 +6,8 @@
 #define PFD_MAX 125000000
 #define VCO_MIN 3400000000
 #define VCO_MAX 6800000000
-#define MHZ 1000000
+#define KHZ 1000
+#define MHZ 1000*KHZ
 
 void sendWord(uint32_t word)
 {
@@ -165,10 +166,10 @@ uint64_t computePfd(uint64_t fref, uint32_t *ref_double, uint32_t *ref_counter, 
 	Serial.println("Computing PFD");
 	*ref_double = 0;
 	*ref_div = 0;
-	/*if(fref < PFD_MAX){
+	if(fref < PFD_MAX){
 		*ref_double = 1;
 		fref=fref*2;
-	}*/
+	}
 	if(fref > PFD_MAX){
 		*ref_counter = int((fref+PFD_MAX/2)/PFD_MAX);
 		fref = fref/(*ref_counter);
@@ -244,7 +245,7 @@ void setFrequency(uint64_t frequency, uint64_t ref){
 	uint32_t vcoBandDiv = 0;
 	uint32_t intn;
 	uint32_t icp = 2;
-	uint32_t bleedi = 1;
+	uint32_t bleedi = 0;
 	fpfd = computePfd(ref, &ref_doubler, &ref_counter, &ref_div);
 	fvco = findVcoFrequency(frequency, &rfdiv);
 	adcDiv = computeAdcClkDiv(fpfd);
@@ -257,7 +258,7 @@ void setFrequency(uint64_t frequency, uint64_t ref){
 	sendRegister9(vcoBandDiv, 1023, 31, 31); //Timeouts set to max, fix!
 	sendRegister8();
 	sendRegister7(1, 3, 0, 3, 1); //Look at these values
-	sendRegister6(0, 1, 1, rfdiv, bleedi, 0, 0, 1, 3); //Look in datasheet to compute bleed current
+	sendRegister6(0, 1, 1, rfdiv, bleedi, 1, 0, 1, 3); //Look in datasheet to compute bleed current
 	sendRegister5();
 	sendRegister4(6, ref_doubler, ref_div, ref_counter, 0, icp, 0, 1, 1, 0, 0, 0);
 	sendRegister3(0, 0, 0, 0); //No phase resync
@@ -277,11 +278,15 @@ void setup() {
 	pinMode(CLK, OUTPUT);     
 	pinMode(LE, OUTPUT);
 	Serial.begin(115200);
-	setFrequency(4450000000, 20000000);
+	setFrequency((uint64_t)6800*MHZ, (uint64_t)10*MHZ);
 }
 
 void loop() {
-	static uint8_t ll = 0;
+	static uint64_t offs = 0;
+	setFrequency((uint64_t)VCO_MIN+offs, (uint64_t)10*MHZ);
+	offs+=(uint64_t)40*MHZ;
+	delay(2000);
+/*	static uint8_t ll = 0;
 	//delay(1000);
 	//sendRegister4(1,0,0,0,0,0,0,1,0,0,0,0);
 	//delay(1000);               // wait for a second
@@ -294,5 +299,5 @@ void loop() {
 		Serial.println("Unlocked");
 	}
 
-	ll = l;
+	ll = l;*/
 }
