@@ -234,7 +234,7 @@ uint32_t computeInt(uint64_t fpfd, uint64_t fvco){
 	return n;
 }
 
-void setFrequency(uint64_t frequency, uint64_t ref){
+void setFrequencyIntMode(uint64_t frequency, uint64_t ref){
 	uint32_t ref_doubler = 0;
 	uint32_t ref_div = 0;
 	uint32_t ref_counter = 0;
@@ -269,6 +269,74 @@ void setFrequency(uint64_t frequency, uint64_t ref){
 	
 }
 
+
+
+void setFrequencyFracMode(uint64_t frequency, uint64_t ref){
+	uint32_t ref_doubler = 0;
+	uint32_t ref_div = 0;
+	uint32_t ref_counter = 0;
+	uint64_t fpfd = 0;
+	uint64_t fvco = 0;
+	uint32_t rfdiv = 0;
+	uint32_t adcDiv = 0;
+	uint32_t vcoBandDiv = 0;
+	uint32_t intn;
+	uint32_t icp = 2;
+	uint32_t bleedi = 0;
+	uint32_t mod1 = 16777216;
+	uint32_t diffFreq = 0;
+	long double frac;
+	uint32_t frac1;
+	float frac2;
+	uint32_t mod2=0x3FFF;
+	float rfout;
+
+	fpfd = computePfd(ref, &ref_doubler, &ref_counter, &ref_div);
+	fvco = findVcoFrequency(frequency, &rfdiv);
+	adcDiv = computeAdcClkDiv(fpfd);
+	vcoBandDiv = computeVcoBandDivision(fpfd);
+
+	intn = computeInt(fpfd, (float)fvco);
+	diffFreq = ((fvco)- (intn*fpfd));///((double)(fpfd));
+	Serial.print("DiffFreq: "); Serial.println(diffFreq);
+
+	frac = ((double)diffFreq)/((double)fpfd);
+	Serial.print("Frac: "); Serial.println(float(frac*10000000.0));
+
+	frac1 = frac*mod1;
+	Serial.print("Frac1: "); Serial.println(frac1);
+
+	frac2 = frac*((double)mod1);//*((double)mod2);
+	//frac2 = frac2&mod2;
+	Serial.print("Frac2: "); Serial.println(frac2);
+	//frac2 = 0;
+	//mod2 = 2;
+	
+	rfout = (((float)intn)+( ((float)frac1)+( ((float)frac2)/((float)mod2)))/((float)mod1))*((float)fpfd)/((float)(1<<rfdiv));
+	//rfout = 1e-6*(((double)intn))*((double)fpfd)/((double)(1<<rfdiv));
+
+
+	Serial.print("Rf out: "); Serial.println((float) rfout/10.0);
+	
+	//write registers
+	sendRegister12(1); //Normal operation fpr phase resync
+	sendRegister11();
+	sendRegister10(adcDiv, 1, 1);
+	sendRegister9(vcoBandDiv, 1023, 31, 31); //Timeouts set to max, fix!
+	sendRegister8();
+	sendRegister7(1, 3, 0, 3, 1); //Look at these values
+	sendRegister6(0, 0, 1, rfdiv, bleedi, 1, 0, 1, 3); //Look in datasheet to compute bleed current
+	sendRegister5();
+	sendRegister4(6, ref_doubler, ref_div, ref_counter, 0, icp, 0, 1, 1, 0, 0, 0);
+	sendRegister3(0, 0, 0, 0); //No phase resync
+	sendRegister2(frac2,mod2); //No frac yet
+	sendRegister1(frac1); //Also no frac
+	delay(1);
+	sendRegister0(1, 0, intn);
+	
+}
+
+
 // the setup routine runs once when you press reset:
 void setup() {                
 	// initialize the digital pin as an output.
@@ -278,14 +346,18 @@ void setup() {
 	pinMode(CLK, OUTPUT);     
 	pinMode(LE, OUTPUT);
 	Serial.begin(115200);
-	setFrequency((uint64_t)6800*MHZ, (uint64_t)10*MHZ);
+	//setFrequencyIntMode((uint64_t)6800*MHZ, (uint64_t)10*MHZ);
+	setFrequencyFracMode((uint64_t)6789012345, (uint64_t)280*MHZ);
+	//setFrequencyFracMode((uint64_t)880*MHZ, (uint64_t)280*MHZ);
+	
 }
 
 void loop() {
-	static uint64_t offs = 0;
-	setFrequency((uint64_t)VCO_MIN+offs, (uint64_t)10*MHZ);
-	offs+=(uint64_t)40*MHZ;
-	delay(2000);
+	/*static uint64_t offs = 0;
+	setFrequencyFracMode((uint64_t)60*MHZ+offs, (uint64_t)10*MHZ);
+	offs+=(uint64_t)2*MHZ;
+	if(offs+60*MHZ > VCO_MAX) offs = 0;*/
+	delay(2000/10);
 /*	static uint8_t ll = 0;
 	//delay(1000);
 	//sendRegister4(1,0,0,0,0,0,0,1,0,0,0,0);
