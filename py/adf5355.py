@@ -157,7 +157,7 @@ class Adf5355:
         maxFpfd = int(float(fvco)/float(minimumMultiplicationFactor)-0.5)
         if maxFpfd > 125e6:
             maxFpfd=125e6
-        print("maximum reference", maxFpfd)
+        #print("maximum reference", maxFpfd)
 
         rCounter, referenceDoubler, fpfd=self.computeRdivDoublerAndFPfd(self.fref, maxFpfd);
         dbl=1;
@@ -173,25 +173,26 @@ class Adf5355:
 
         INT = int(N)
         T=(N-INT)*0x1000000
-        print("T", T)
+        #print("T", T)
         FRAC1=int(T)
-        print("FRAC1", FRAC1)
+        #print("FRAC1", FRAC1)
 
         RT = T-FRAC1
-        print("RT", RT)
+        #print("RT", RT)
         FRAC2 = RT.numerator
         MOD2 = RT.denominator
 
+        if FRAC2 == 0:
+            MOD2 =2
         if MOD2 > 0x3FFF:
             sf=float(0x3FF)/MOD2
             MOD2=int(MOD2*sf)
             FRAC2=int(FRAC2*sf)
             print("Exact solution not possible, rescaling to approximate")
-
         
-        print("INT", INT, "FRAC1", FRAC1, "FRAC2", FRAC2, "MOD2", MOD2)
+        #print("INT", INT, "FRAC1", FRAC1, "FRAC2", FRAC2, "MOD2", MOD2)
         fvcoOut = (mp.mpf(fpfd.numerator)/mp.mpf(fpfd.denominator))*(mp.mpf(INT)+(mp.mpf(FRAC1)+mp.mpf(FRAC2)/mp.mpf(MOD2))/mp.mpf(0x1000000))
-        print("Vco frequency will be", fvcoOut)
+        #print("Vco frequency will be", fvcoOut)
         return INT, FRAC1, FRAC2, MOD2, rCounter, referenceDoubler, fpfd, fvcoOut
 
 
